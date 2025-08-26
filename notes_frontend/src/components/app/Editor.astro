@@ -1,0 +1,173 @@
+---
+---
+<main class="app-main">
+  <div class="editor-wrap">
+    <div class="editor-toolbar">
+      <button class="btn" id="save-note-btn" aria-label="Save note">Save</button>
+      <button class="btn secondary" id="new-note-btn" aria-label="Create new note">New</button>
+      <span id="status" class="status" aria-live="polite"></span>
+    </div>
+    <div class="editor-fields">
+      <input id="note-title" placeholder="Note title" aria-label="Note title" />
+      <textarea id="note-content" placeholder="Start typing..." aria-label="Note content"></textarea>
+    </div>
+  </div>
+</main>
+
+<style>
+  .editor-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+  }
+
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    box-shadow: 0 1px 2px var(--shadow-color);
+  }
+
+  .status {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .editor-fields {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 8px;
+    height: calc(100vh - var(--header-height) - 80px);
+  }
+
+  #note-title {
+    font-size: 20px;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    outline: none;
+  }
+
+  #note-content {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    outline: none;
+    resize: none;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    font-size: 16px;
+  }
+</style>
+
+<script>
+  import { getNote, createNote, updateNote } from '../../services/api';
+  type Note = import('../../services/api').Note;
+
+  const SELECT_EVENT = 'notes:select';
+  const REFRESH_EVENT = 'notes:refresh';
+  const ADD_EVENT = 'notes:add';
+
+  const titleEl = document.getElementById('note-title') as HTMLInputElement;
+  const contentEl = document.getElementById('note-content') as HTMLTextAreaElement;
+  const saveBtn = document.getElementById('save-note-btn') as HTMLButtonElement;
+  const newBtn = document.getElementById('new-note-btn') as HTMLButtonElement;
+  const statusEl = document.getElementById('status') as HTMLSpanElement;
+
+  let currentId: string | null = null;
+  let dirty = false;
+
+  function setStatus(text: string, timeout = 2000) {
+    if (!statusEl) return;
+    statusEl.textContent = text;
+    if (timeout) {
+      window.setTimeout(() => { statusEl.textContent = ''; }, timeout);
+    }
+  }
+
+  function markDirty() { dirty = true; }
+  function clearDirty() { dirty = false; }
+
+  function setFields(note?: Partial<Note>) {
+    titleEl.value = note?.title || '';
+    contentEl.value = note?.content || '';
+  }
+
+  async function loadNote(id: string) {
+    try {
+      setStatus('Loading…', 0);
+      const n = await getNote(id);
+      currentId = n.id;
+      setFields(n);
+      clearDirty();
+      setStatus('Loaded', 1000);
+    } catch (e) {
+      console.error(e);
+      setStatus('Failed to load note');
+    }
+  }
+
+  async function saveNote() {
+    try {
+      const payload = { title: titleEl.value.trim(), content: contentEl.value };
+      setStatus('Saving…', 0);
+      if (currentId) {
+        await updateNote(currentId, payload);
+        setStatus('Saved');
+      } else {
+        const created = await createNote(payload);
+        currentId = created.id;
+        setStatus('Created');
+      }
+      clearDirty();
+      window.dispatchEvent(new CustomEvent(REFRESH_EVENT));
+    } catch (e) {
+      console.error(e);
+      setStatus('Failed to save');
+      alert('Failed to save note.');
+    }
+  }
+
+  function newNote() {
+    if (dirty && !confirm('Discard unsaved changes?')) {
+      return;
+    }
+    currentId = null;
+    setFields({ title: '', content: '' });
+    clearDirty();
+    setStatus('New note');
+  }
+
+  // Bind events
+  saveBtn?.addEventListener('click', saveNote);
+  newBtn?.addEventListener('click', newNote);
+  titleEl?.addEventListener('input', () => markDirty());
+  contentEl?.addEventListener('input', () => markDirty());
+
+  window.addEventListener(SELECT_EVENT, (ev: any) => {
+    const id = ev?.detail?.id as string | undefined;
+    if (!id) return;
+    if (dirty && !confirm('Discard unsaved changes?')) return;
+    loadNote(id);
+  });
+
+  window.addEventListener(ADD_EVENT, () => {
+    newNote();
+  });
+
+  // Initialize empty editor state
+  newNote();
+</script>

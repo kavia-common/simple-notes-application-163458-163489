@@ -1,0 +1,41 @@
+---
+---
+<header class="app-header">
+  <div class="brand" aria-label="Simple Notes">
+    <span class="brand-badge" role="img" aria-label="logo"></span>
+    <span>Simple Notes</span>
+  </div>
+
+  <div class="searchbar" style="margin-left: 8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 21l-4.2-4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+    </svg>
+    <input id="search-notes" type="search" placeholder="Search notes..." aria-label="Search notes" />
+  </div>
+
+  <button class="btn" id="add-note-btn" style="margin-left: 8px;" aria-label="Add note">
+    + Add Note
+  </button>
+</header>
+
+<script>
+  import { debounce } from '../../utils/debounce';
+  // Custom event names
+  const SEARCH_EVENT = 'notes:search';
+  const ADD_EVENT = 'notes:add';
+
+  const searchInput = document.getElementById('search-notes');
+  const addBtn = document.getElementById('add-note-btn');
+
+  const emitSearch = debounce(() => {
+    const query = (searchInput as HTMLInputElement).value || '';
+    window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: { query } }));
+  }, 250);
+
+  searchInput?.addEventListener('input', emitSearch);
+
+  addBtn?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent(ADD_EVENT));
+  });
+</script>
