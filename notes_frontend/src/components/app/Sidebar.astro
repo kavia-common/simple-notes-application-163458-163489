@@ -1,0 +1,163 @@
+---
+---
+<aside class="app-sidebar">
+  <div id="notes-list" class="notes-list" role="list" aria-label="Notes list"></div>
+</aside>
+
+<style>
+  .notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .note-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    box-shadow: 0 1px 2px var(--shadow-color);
+  }
+  .note-item:hover {
+    background: var(--card-hover-bg);
+  }
+  .note-item.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 15%, transparent);
+  }
+
+  .note-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .note-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .note-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .icon-btn {
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .icon-btn.danger {
+    color: #b91c1c;
+  }
+</style>
+
+<script>
+  import { listNotes, deleteNote } from '../../services/api';
+
+  type Note = import('../../services/api').Note;
+
+  const LIST_CONTAINER_ID = 'notes-list';
+  const SELECT_EVENT = 'notes:select';
+  const REFRESH_EVENT = 'notes:refresh';
+  const SEARCH_EVENT = 'notes:search';
+
+  let notes: Note[] = [];
+  let selectedId: string | null = null;
+  let currentQuery = '';
+
+  const $list = document.getElementById(LIST_CONTAINER_ID);
+
+  function formatDate(iso: string) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch {
+      return iso;
+    }
+  }
+
+  function render() {
+    if (!$list) return;
+    if (!notes.length) {
+      $list.innerHTML = `<div style="color: var(--text-secondary); padding: 12px;">No notes found.</div>`;
+      return;
+    }
+
+    $list.innerHTML = notes.map(n => `
+      <div class="note-item ${n.id === selectedId ? 'active' : ''}" data-id="${n.id}">
+        <div>
+          <div class="note-title" title="${n.title}">${n.title || '(Untitled)'}</div>
+          <div class="note-meta">Updated ${formatDate(n.updatedAt)}</div>
+        </div>
+        <div class="note-actions">
+          <button class="icon-btn danger" data-action="delete" data-id="${n.id}" title="Delete">
+            🗑
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function refresh(loadSelectFirst = false) {
+    try {
+      notes = await listNotes(currentQuery);
+      if (loadSelectFirst && notes[0]) {
+        selectedId = notes[0].id;
+        window.dispatchEvent(new CustomEvent(SELECT_EVENT, { detail: { id: selectedId } }));
+      }
+      render();
+    } catch (e) {
+      console.error(e);
+      if ($list) $list.innerHTML = `<div style="color:#b91c1c; padding: 12px;">Failed to load notes.</div>`;
+    }
+  }
+
+  // Event listeners
+  window.addEventListener(REFRESH_EVENT, () => refresh());
+  window.addEventListener(SEARCH_EVENT, (ev: any) => {
+    currentQuery = ev?.detail?.query || '';
+    refresh();
+  });
+
+  // Click handlers
+  $list?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest('button');
+    if (btn && btn.dataset.action === 'delete' && btn.dataset.id) {
+      const id = btn.dataset.id;
+      const confirmDelete = window.confirm('Delete this note?');
+      if (!confirmDelete) return;
+      try {
+        await deleteNote(id);
+        if (selectedId === id) selectedId = null;
+        await refresh(true);
+      } catch (err) {
+        alert('Failed to delete note.');
+        console.error(err);
+      }
+      return;
+    }
+
+    const item = (target.closest('.note-item') as HTMLElement | null);
+    if (item?.dataset?.id) {
+      selectedId = item.dataset.id;
+      render();
+      window.dispatchEvent(new CustomEvent(SELECT_EVENT, { detail: { id: selectedId } }));
+    }
+  });
+
+  // Initial load
+  refresh(true);
+</script>

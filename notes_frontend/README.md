@@ -1,47 +1,62 @@
-# Astro Starter Kit: Minimal
+# Simple Notes Frontend (Astro)
 
-```sh
-npm create astro@latest -- --template minimal
+A minimalistic, light-themed notes UI built with Astro. Features:
+- Add note, Edit note, Delete note, View notes, Search notes
+- Sidebar for notes list, main editor area, header with search and Add
+- Configurable backend API via environment variable
+
+## Environment variables
+
+Create a `.env` file at the project root (same directory as package.json):
+
+```
+PUBLIC_NOTES_API_URL=https://your-backend.example.com/api
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+If not set, the app falls back to `http://localhost:8787/api`.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Note: Only PUBLIC_ prefixed variables are exposed to the client by Astro.
 
-## 🚀 Project Structure
+## Scripts
 
-Inside of your Astro project, you'll see the following folders and files:
+- `npm install`
+- `npm run dev` Start local dev server (default port 3000 per astro.config.mjs)
+- `npm run build` Production build
+- `npm run preview` Preview production build
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+## Folder structure (key files)
+
+```
+src/
+  components/
+    app/
+      Header.astro
+      Sidebar.astro
+      Editor.astro
+    NotesApp.astro
+    ThemeToggle.astro
+  layouts/
+    Layout.astro
+  pages/
+    index.astro
+  services/
+    api.ts
+  utils/
+    debounce.ts
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Backend API contract (placeholder)
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+The app expects these endpoints:
+- GET    {PUBLIC_NOTES_API_URL}/notes?q=search  -> [{ id, title, content, updatedAt, createdAt }]
+- GET    {PUBLIC_NOTES_API_URL}/notes/:id       -> { id, title, content, updatedAt, createdAt }
+- POST   {PUBLIC_NOTES_API_URL}/notes           -> { id, title, content, updatedAt, createdAt }
+- PUT    {PUBLIC_NOTES_API_URL}/notes/:id       -> { id, title, content, updatedAt, createdAt }
+- DELETE {PUBLIC_NOTES_API_URL}/notes/:id       -> 204 No Content
 
-Any static assets, like images, can be placed in the `public/` directory.
+Adjust in src/services/api.ts if your backend differs.
 
-## 🧞 Commands
+## Notes
 
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- UI colors: primary #1976d2, accent #ff9800, secondary #ffffff
+- Minimalistic design focused on clarity and productivity.
